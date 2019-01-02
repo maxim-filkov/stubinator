@@ -27,8 +27,10 @@ Example of JSON to stub your API:
 According to the above JSON, Stubinator will start responding with 200 OK and body `{ "key": "value" }` to every GET
 request sent to the path '/test'.
 
-You have to submit JSON to the Stubinator's path '/stub?name={name}', where name - is an arbitrary string which better
-describes your API, e.g. 'registration_api'.
+You have to submit JSON to the Stubinator's path '/stub?name={stub_name}', where name - is an arbitrary string which
+better describes your API, e.g. 'registration_api'.
+
+To delete a stub just send DELETE request to /stub?name={stub_name}.
 
 ## How to run Stubinator
 
