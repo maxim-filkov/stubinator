@@ -1,0 +1,9 @@
+{
+  "method": "get",
+  "path": "/test",
+  "status": 200,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": "{\"key\":\"value\"}"
+}
