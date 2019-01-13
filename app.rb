@@ -18,15 +18,26 @@ class Stubinator < Sinatra::Base
   end
 
   post '/stub' do
-    name = params[:name]
-    File.write("responses/#{name}.json", request.body.read)
-    restart_app
+    body = request.body.read
+    json = JSON.parse(body)
+    if json['path'].nil?
+      status 400
+      headers['Content-Type'] = 'application/json'
+      body '{"error": "empty \'path\' field is not allowed"}'
+    else
+      File.write("responses/#{params[:name]}.json", body)
+      restart_app
+    end
   end
 
   delete '/stub' do
     name = params[:name]
     File.delete("responses/#{name}.json")
     restart_app
+  end
+
+  patch '/stub' do
+
   end
 
   private

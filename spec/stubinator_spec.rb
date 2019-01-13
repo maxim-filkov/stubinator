@@ -68,6 +68,12 @@ class HelloWorldTest < Test::Unit::TestCase
     then_response_is_equal_to(200, 'body', { test_header_key: 'test_header_value' })
   end
 
+  def test_stubbing_with_no_path
+    when_add_endpoint_stub(@stub_name = 'test_no_path', 'get', '200',
+                           { test_header_key: 'test_header_value' }, 'body', nil)
+    then_response_is_equal_to(400, '{"error": "empty \'path\' field is not allowed"}', { 'Content-Type': 'application/json' })
+  end
+
   def test_stubbing_with_404_status
     when_add_endpoint_stub(@stub_name = 'test_404_status', 'get', '404',
                            { test_header_key: 'test_header_value' }, 'body', '/test_404_status')
@@ -99,7 +105,7 @@ class HelloWorldTest < Test::Unit::TestCase
   end
 
   def delete_endpoint_stub(name)
-    delete "/stub?name=#{name}"
+    File.delete("responses/#{name}.json") if File.exist?("responses/#{name}.json")
     sleep 3
   end
 
