@@ -20,10 +20,10 @@ class Stubinator < Sinatra::Base
   post '/stub' do
     body = request.body.read
     json = JSON.parse(body)
-    if json['path'].nil?
+    if json['path'].nil? or json['method'].nil?
       status 400
       headers['Content-Type'] = 'application/json'
-      body '{"error": "empty \'path\' field is not allowed"}'
+      body json['path'].nil? ? '{"error": "empty \'path\' field is not allowed"}' : '{"error": "empty \'method\' field is not allowed"}'
     else
       File.write("responses/#{params[:name]}.json", body)
       restart_app

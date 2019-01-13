@@ -74,6 +74,12 @@ class HelloWorldTest < Test::Unit::TestCase
     then_response_is_equal_to(400, '{"error": "empty \'path\' field is not allowed"}', { 'Content-Type': 'application/json' })
   end
 
+  def test_stubbing_with_no_method
+    when_add_endpoint_stub(@stub_name = 'test_no_method', nil, '200',
+                           { test_header_key: 'test_header_value' }, 'body', '/test_no_method')
+    then_response_is_equal_to(400, '{"error": "empty \'method\' field is not allowed"}', { 'Content-Type': 'application/json' })
+  end
+
   def test_stubbing_with_404_status
     when_add_endpoint_stub(@stub_name = 'test_404_status', 'get', '404',
                            { test_header_key: 'test_header_value' }, 'body', '/test_404_status')

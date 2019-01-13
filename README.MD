@@ -47,3 +47,10 @@ docker build -t stubinator .
 docker run -it -d -p 3000:3000 stubinator
 ```
 
+## How to test
+
+Execute:
+
+```bash
+rspec ./spec/
+```
