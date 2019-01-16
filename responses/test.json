@@ -5,5 +5,5 @@
   "headers": {
     "Content-Type": "application/json"
   },
-  "body": "\"key:\"\"value\":"
+  "body": "{\"key\":\"value\"}"
 }
