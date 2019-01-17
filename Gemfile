@@ -9,4 +9,5 @@ group :development, :test do
   gem 'rspec'
   gem 'rack-test', '~> 0.6.2'
   gem 'test-unit'
+  gem 'addressable'
 end
