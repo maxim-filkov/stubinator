@@ -3,35 +3,33 @@ require 'addressable/uri'
 
 class Stubinator < Sinatra::Base
   before do
-    @my_routes = []
+    @my_stubs = []
     Dir.glob('responses/*.json') do |path|
       stub = JSON.parse(File.read(path))
-      @my_routes << stub
+      @my_stubs << stub
     end
-  end
-
-  post '/numbers' do
-    phone_data = JSON.parse(File.read('legacy_responses/phone.json'))
-    phone_data['phone_number'] = "+1#{phone_data['area_code']}#{rand.to_s[4..10]}"
-    status 200
-    phone_data.to_json
   end
 
   post '/stub' do
     begin
       body = request.body.read
       json = JSON.parse(body)
-      if json['name'].nil? || json['path'].nil? || json['method'].nil?
+      if json['name'].nil? || json['request_path'].nil? || json['request_method'].nil?
         field =
           if json['name'].nil?
             'name'
           else
-            json['path'].nil? ? 'path' : 'method'
+            json['request_path'].nil? ? 'request_path' : 'request_method'
           end
         response_with(400, "{\"error\":\"the '#{field}' field is required\"}")
       else
-        add_stub('name' => json['name'], 'path' => json['path'], 'method' => json['method'],
-                 'status' => json['status'], 'body' => json['body'], 'headers' => json['headers'])
+        add_stub('name' => json['name'],
+                 'request_path' => json['request_path'],
+                 'request_method' => json['request_method'],
+                 'response_status' => json['response_status'].nil? ? 200 : json['response_status'],
+                 'response_body' => json['response_body'].nil? ? '' : json['response_body'],
+                 'response_headers' => json['response_headers'].nil? ? {} : json['response_headers'],
+                 'request_body' => json['request_body'].nil? ? [] : json['request_body'])
         body ''
       end
     rescue JSON::ParserError
@@ -40,7 +38,6 @@ class Stubinator < Sinatra::Base
   end
 
   delete '/stub' do
-    json = {}
     begin
       json = JSON.parse(request.body.read)
       if json['name'].nil?
@@ -61,20 +58,21 @@ class Stubinator < Sinatra::Base
       elsif File.exist?("responses/#{update['name']}.json")
         stub = JSON.parse(File.read("responses/#{update['name']}.json"))
         begin
-          stub_json = JSON.parse(stub['body'])
-          body_json = JSON.parse(update['body'])
+          stub_json = JSON.parse(stub['response_body'])
+          body_json = JSON.parse(update['response_body'])
         rescue StandardError
           # ignored
         end
-        stub['headers'] = update['headers'].merge(update['headers']) unless update['headers'].nil?
-        stub['status'] = update['status'] unless update['status'].nil?
-        stub['path'] = update['path'] unless update['path'].nil?
-        stub['method'] = update['method'] unless update['method'].nil?
-        stub['body'] = stub_json.nil? && body_json.nil? ? update['body'] : stub_json.merge(body_json).to_json unless update['body'].nil?
+        stub['response_headers'] = update['response_headers'].merge(update['response_headers']) unless update['response_headers'].nil?
+        stub['response_status'] = update['response_status'] unless update['response_status'].nil?
+        stub['response_body'] = stub_json.nil? && body_json.nil? ? update['response_body'] : stub_json.merge(body_json).to_json unless update['response_body'].nil?
+        stub['request_path'] = update['request_path'] unless update['request_path'].nil?
+        stub['request_method'] = update['request_method'] unless update['request_method'].nil?
+        stub['request_body'] = update['request_body'] unless update['request_body'].nil?
         add_stub(stub)
         body ''
       else
-        response_with(400, "{\"error\": \"stub with name '#{json['name']}' not found\"}")
+        response_with(400, "{\"error\": \"stub with name '#{update['name']}' not found\"}")
       end
     rescue JSON::ParserError
       response_with(400, '{"error":"the body should represent a stub in valid JSON format"}')
@@ -112,22 +110,32 @@ class Stubinator < Sinatra::Base
   private
 
   def add_stub(stub)
-    @my_routes.delete_if { |r| r['name'] == stub['name'] }
-    @my_routes << stub
-    File.write("responses/#{stub['name']}.json", stub.to_json)
+    @my_stubs.delete_if { |r| r['name'] == stub['name'] }
+    @my_stubs << stub
+    File.write("responses/#{stub['name']}.json", JSON.pretty_generate(stub))
   end
 
-  def route(method, params)
-    path = params[:splat].first
-    params.delete(:splat)
-    params = params == {} ? nil : params
-    route = @my_routes.select { |r| r['path'].index("/#{path}") == 0 && r['method'] == method && params == Addressable::URI.parse(r['path']).query_values }.first
+  def route(request_method, request_params)
+    request_path = request_params[:splat].first
+    request_body = request.body.read
+    request_params.delete(:splat)
+    request_params.delete("#{request_body}") # this is for tests which send body as a part of params...
+    request_params = request_params == {} ? nil : request_params
+
+    route = @my_stubs.select { |stub|
+      stub['request_path'].split("?").first == "/#{request_path}" &&
+        request_method == stub['request_method'] &&
+        request_params == Addressable::URI.parse(stub['request_path']).query_values &&
+        stub['request_body'].select {
+          |rb| /#{rb}/.match(request_body) }.length == stub['request_body'].length
+    }.first
+
     if route.nil?
-      response_with(404, "{\"error\": \"the stub '#{method.upcase!} /#{path}' hasn't been found\"}")
+      response_with(404, "{\"error\": \"the stub '#{request_method.upcase!} /#{request_path}' hasn't been found\"}")
     else
-      status route['status']
-      route['headers'].each { |k, v| headers[k] = v }
-      body route['body']
+      status route['response_status']
+      route['response_headers'].each { |k, v| headers[k] = v }
+      body route['response_body']
     end
   end
 

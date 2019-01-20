@@ -1,9 +1,11 @@
 {
-  "method": "get",
-  "path": "/test",
-  "status": 200,
-  "headers": {
+  "name": "test",
+  "request_path": "/test",
+  "request_method": "get",
+  "request_body": ".*",
+  "response_status": 200,
+  "response_headers": {
     "Content-Type": "application/json"
   },
-  "body": "{\"key\":\"value\"}"
+  "response_body": "{\"key\":\"value\"}"
 }
