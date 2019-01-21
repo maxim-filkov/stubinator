@@ -1,3 +1,2 @@
-require File.absolute_path("app.rb")
-
+require File.absolute_path('app.rb')
 run Stubinator

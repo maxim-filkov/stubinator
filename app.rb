@@ -119,16 +119,16 @@ class Stubinator < Sinatra::Base
     request_path = request_params[:splat].first
     request_body = request.body.read
     request_params.delete(:splat)
-    request_params.delete("#{request_body}") # this is for tests which send body as a part of params...
+    request_params.delete(request_body.to_s) # this is for tests which send body as a part of params...
     request_params = request_params == {} ? nil : request_params
 
-    route = @my_stubs.select { |stub|
-      stub['request_path'].split("?").first == "/#{request_path}" &&
+    route = @my_stubs.find do |stub|
+      stub['request_path'].split('?').first == "/#{request_path}" &&
         request_method == stub['request_method'] &&
         request_params == Addressable::URI.parse(stub['request_path']).query_values &&
-        stub['request_body'].select {
-          |rb| /#{rb}/.match(request_body) }.length == stub['request_body'].length
-    }.first
+        (stub['request_body'].nil? ||
+          stub['request_body'].count { |rb| /#{rb}/m.match(request_body) } == stub['request_body'].length)
+    end
 
     if route.nil?
       response_with(404, "{\"error\": \"the stub '#{request_method.upcase!} /#{request_path}' hasn't been found\"}")
